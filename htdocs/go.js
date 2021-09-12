@@ -14,6 +14,7 @@ var cellHeight = boardHeight / (boardSize - 1);
 
 var lastX;
 var lastY;
+var playCount = 0;
 
 /* state of pieces 
     0: empty
@@ -152,7 +153,8 @@ function drawGrid()
 canvas.addEventListener('mousedown', function(evt) 
 {
     if (lastX && lastY) {
-        state[lastX][lastY] = 1;
+        state[lastX][lastY] = playCount % 2 + 1;
+        playCount++;
     }
 });
 
