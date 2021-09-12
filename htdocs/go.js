@@ -153,8 +153,12 @@ function drawGrid()
 canvas.addEventListener('mousedown', function(evt) 
 {
     if (lastX && lastY) {
-        state[lastX][lastY] = playCount % 2 + 1;
-        playCount++;
+        if (state[lastX][lastY] == 0) {
+            state[lastX][lastY] = playCount % 2 + 1;
+            playCount++;
+        } else {
+            state[lastX][lastY] = 0;
+        }
     }
 });
 
