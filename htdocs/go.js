@@ -15,6 +15,21 @@ var cellHeight = boardHeight / (boardSize - 1);
 var lastX;
 var lastY;
 
+/* state of pieces 
+    0: empty
+    1: white
+    2: black
+*/
+var state = [];
+for (var i = 0; i < boardSize; i++)
+{
+    state[i] = [];
+    for (var j = 0; j < boardSize; j++)
+    {
+        state[i][j] = 0;
+    }
+}
+
 drawGrid();
 
 function drawGrid()
@@ -107,16 +122,37 @@ function drawGrid()
             canvas.height - (textSpacing * 2)
         );
 	}
+
+    /* draw pieces */
+    for (var i = 0; i < boardSize; i++)
+    {
+        for (var j = 0; j < boardSize; j++)
+        {
+            switch(state[i][j]) {
+                case 1:
+                    placeStone(
+                        (i * cellWidth) + border, 
+                        (j * cellWidth) + border, 
+                        'rgba(255, 255, 255, 1)'
+                    );
+                    break;
+                case 2:
+                    placeStone(
+                        (i * cellWidth) + border, 
+                        (j * cellWidth) + border, 
+                        'rgba(0, 0, 0, 1)'
+                    );
+                    break;
+                default:
+            }
+        }
+    }
 }
 
 canvas.addEventListener('mousedown', function(evt) 
 {
     if (lastX && lastY) {
-        placeStone(
-            (lastX * cellWidth) + border, 
-            (lastY * cellWidth) + border, 
-            'rgba(0, 0, 0, 1)'
-        );
+        state[lastX][lastY] = 1;
     }
 });
 
