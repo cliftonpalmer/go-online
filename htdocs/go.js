@@ -124,6 +124,10 @@ function drawGrid()
         );
     }
 
+    drawPieces();
+}
+
+function drawPieces() {
     /* draw pieces */
     for (var i = 0; i < boardSize; i++)
     {
@@ -159,6 +163,7 @@ canvas.addEventListener('mousedown', function(evt)
         } else {
             state[lastX][lastY] = 0;
         }
+        drawGrid();
     }
 });
 
