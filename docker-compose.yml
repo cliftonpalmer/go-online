@@ -1,5 +1,14 @@
 version: '3'
 services:
+    db:
+        image: mariadb:10.6
+        environment:
+            MYSQL_ROOT_PASSWORD: admin
+    socket:
+        build: ./socket
+        image: cliftonpalmer/go-socket
+        ports:
+        - 3000:3000
     httpd:
         image: httpd:2.4
         volumes:
