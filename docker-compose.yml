@@ -3,7 +3,10 @@ services:
     db:
         image: mariadb:10.6
         environment:
-            MYSQL_ROOT_PASSWORD: admin
+            MARIADB_ROOT_PASSWORD: admin
+            MARIADB_DATABASE: go
+            MARIADB_USER: socket
+            MARIADB_PASSWORD: socketpw
     socket:
         build: ./socket
         image: cliftonpalmer/go-socket
