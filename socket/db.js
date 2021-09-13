@@ -7,7 +7,7 @@ const pool = mariadb.createPool({
     connectionLimit: 5
 });
 
-async function asyncFunction() {
+async function testdb() {
     let conn;
     try {
         conn = await pool.getConnection();
@@ -21,3 +21,5 @@ async function asyncFunction() {
         if (conn) return conn.end();
     }
 }
+
+exports.testdb = testdb;
