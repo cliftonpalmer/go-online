@@ -46,8 +46,13 @@ const connect = function() {
 
         socket.onopen = (e) => {
             // Send a little test data, which we can use on the server if we want
-            socket.send(JSON.stringify({ "loaded" : true }));
             // Resolve the promise - we are connected
+            socket.send(JSON.stringify({
+                "type":"getBoardState",
+                "data": {
+                    "session":session
+                }
+            }));
             resolve();
         }
 
@@ -56,6 +61,13 @@ const connect = function() {
             let parsed = JSON.parse(msg.data);
             console.log(parsed);
             switch (parsed.type) {
+                case "addMove":
+                    socket.send(JSON.stringify({
+                        "type":"getBoardState",
+                        "data": {
+                            "session":session
+                        }
+                    }));
                 case "getBoardState":
                     console.log("Got board state, setting...");
                     parsed.data.forEach( function (move, index) {
@@ -210,18 +222,22 @@ function drawPieces() {
     }
 }
 
+function getState(playCount) {
+    switch (playCount % 2 + 1) {
+        case 1:
+            return 'white';
+        case 2:
+            return 'black';
+        default:
+            return 'empty';
+    }
+}
+
 canvas.addEventListener('mousedown', function(evt) 
 {
-    if (lastX && lastY) {
-        if (state[lastX][lastY] == 0) {
-            state[lastX][lastY] = playCount % 2 + 1;
-            playCount++;
-        } else {
-            state[lastX][lastY] = 0;
-        }
-        drawGrid();
-
+    try {
         // push state change to backend
+        let state = getState(playCount++);
         if(isOpen(socket)) {
             socket.send(JSON.stringify({
                 "type":"addMove",
@@ -229,19 +245,16 @@ canvas.addEventListener('mousedown', function(evt)
                     "session":session,
                     "x":lastX,
                     "y":lastY,
-                    "state":"white",
-                }
-            }));
-            socket.send(JSON.stringify({
-                "type":"getBoardState",
-                "data": {
-                    "session":session
+                    "state":state
                 }
             }));
         } else {
             console.log("Websocket is closed");
         }
+    } catch(e) {
+        console.log("Position is undefined");
     }
+    drawGrid();
 });
 
 canvas.addEventListener('mousemove', function(evt) 
@@ -299,4 +312,3 @@ function getGridPoint(evt)
 
 // finish
 connect();
-drawGrid();
