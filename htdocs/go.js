@@ -51,10 +51,23 @@ const connect = function() {
             resolve();
         }
 
-        socket.onmessage = (data) => {
-            console.log(data);
+        socket.onmessage = (msg) => {
             // Any data from the server can be manipulated here.
-            //let parsedData = JSON.parse(data.data);
+            let parsed = JSON.parse(msg.data);
+            console.log(parsed);
+            switch (parsed.type) {
+                case "getBoardState":
+                    console.log("Got board state, setting...");
+                    parsed.data.forEach( function (move, index) {
+                        console.log(move);
+                        state[move.x][move.y] = move.state === 'white' ? 1 : 2;
+                    });
+                    console.log("Done setting board state");
+                    drawGrid();
+                    break;
+                default:
+                    console.log(msg);
+            }
         }
 
         socket.onerror = (e) => {
@@ -217,6 +230,12 @@ canvas.addEventListener('mousedown', function(evt)
                     "x":lastX,
                     "y":lastY,
                     "state":"white",
+                }
+            }));
+            socket.send(JSON.stringify({
+                "type":"getBoardState",
+                "data": {
+                    "session":session
                 }
             }));
         } else {

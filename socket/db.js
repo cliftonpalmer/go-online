@@ -7,27 +7,6 @@ const pool = mariadb.createPool({
     connectionLimit: 5
 });
 
-async function testdb() {
-    let conn;
-    try {
-        conn = await pool.getConnection();
-        const rows = await conn.query("SELECT 1 as val");
-        console.log(rows); //[ {val: 1}, meta: ... ]
-
-        var res = await conn.query(
-            "CREATE TABLE IF NOT EXISTS go.myTable ( id INT, tag VARCHAR(255) )"
-        );
-        console.log(res);
-
-        res = await conn.query("INSERT INTO go.myTable value (?, ?)", [1, "mariadb"]);
-        console.log(res); // { affectedRows: 1, insertId: 1, warningStatus: 0 }
-    } catch (err) {
-        console.log(err);
-    } finally {
-        if (conn) return conn.end();
-    }
-}
-
 async function addMove(session_id, pos_x, pos_y, state) {
     let conn;
     try {
@@ -58,9 +37,23 @@ state = VALUES(state);
     } catch (err) {
         console.log(err);
     } finally {
-        if (conn) return conn.end();
+        if (conn) conn.end();
     }
 }
 
-exports.testdb = testdb;
+async function getBoardState(session_id) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(`
+SELECT x, y, state from go.state where session_id = ?
+        `, [session_id]);
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
 exports.addMove = addMove;
+exports.getBoardState = getBoardState;
