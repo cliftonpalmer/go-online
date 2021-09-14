@@ -21,6 +21,7 @@ var playCount = 0;
     1: white
     2: black
 */
+var session = 0;
 var state = [];
 for (var i = 0; i < boardSize; i++)
 {
@@ -31,8 +32,50 @@ for (var i = 0; i < boardSize; i++)
     }
 }
 
-drawGrid();
+// @connect
+// Connect to the websocket
+var socket;
+const connect = function() {
+    return new Promise((resolve, reject) => {
+        const socketProtocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
+        const port = 3000;
+        const socketUrl = `${socketProtocol}//${window.location.hostname}:${port}/ws/`
 
+        // Define socket
+        socket = new WebSocket(socketUrl);
+
+        socket.onopen = (e) => {
+            // Send a little test data, which we can use on the server if we want
+            socket.send(JSON.stringify({ "loaded" : true }));
+            // Resolve the promise - we are connected
+            resolve();
+        }
+
+        socket.onmessage = (data) => {
+            console.log(data);
+            // Any data from the server can be manipulated here.
+            //let parsedData = JSON.parse(data.data);
+        }
+
+        socket.onerror = (e) => {
+            // Return an error if any occurs
+            console.log(e);
+            resolve();
+            // Try to connect again
+            connect();
+        }
+    });
+}
+
+// @isOpen
+// check if a websocket is open
+const isOpen = function(ws) {
+    console.log(ws.readyState);
+    return ws.readyState === ws.OPEN
+}
+
+
+// finish grid
 function drawGrid()
 {    
     
@@ -164,6 +207,21 @@ canvas.addEventListener('mousedown', function(evt)
             state[lastX][lastY] = 0;
         }
         drawGrid();
+
+        // push state change to backend
+        if(isOpen(socket)) {
+            socket.send(JSON.stringify({
+                "type":"addMove",
+                "data": {
+                    "session":session,
+                    "x":lastX,
+                    "y":lastY,
+                    "state":"white",
+                }
+            }));
+        } else {
+            console.log("Websocket is closed");
+        }
     }
 });
 
@@ -219,3 +277,7 @@ function getGridPoint(evt)
         y: roundY
     };
 }
+
+// finish
+connect();
+drawGrid();
