@@ -1,5 +1,17 @@
 version: '3'
 services:
+    db:
+        image: mariadb:10.6
+        environment:
+            MARIADB_ROOT_PASSWORD: admin
+            MARIADB_DATABASE: go
+            MARIADB_USER: socket
+            MARIADB_PASSWORD: socketpw
+    socket:
+        build: ./socket
+        image: cliftonpalmer/go-socket
+        ports:
+        - 3000:3000
     httpd:
         image: httpd:2.4
         volumes:
