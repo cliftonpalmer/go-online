@@ -26,7 +26,7 @@ where session_id = ?;
                 lastUpdated = updatedAt;
                 res = await db.getBoardState(session_id);
                 ws.send(JSON.stringify({
-                    "type": "getBoardState",
+                    "type": "board",
                     "data": res
                 }));
             }
@@ -40,7 +40,7 @@ where session_id = ?;
 }
 
 app.ws('/ws', async function(ws, req) {
-    // TODO: poll for stateful change and notify clients to update their boards
+    // poll for stateful change and notify clients to update their boards
     var session_id = 0;
     pollStatefulChange(ws, 0);
 
@@ -48,30 +48,27 @@ app.ws('/ws', async function(ws, req) {
         console.log(`ws message: ${msg}`);
 
         var parsed = JSON.parse(msg);
-        var type = parsed.type;
-        var res = [];
         switch (parsed.type) {
-            case "addMove":
-                res = await db.addMove(
+            case "move":
+                await db.addMove(
                     parsed.data.session,
                     parsed.data.x,
                     parsed.data.y,
                     parsed.data.state,
                     );
-                break;
-            case "getBoardState":
-                res = await db.getBoardState(
+                // fall through and return new board state
+            case "board":
+                var res = await db.getBoardState(
                     parsed.data.session
                     );
+                ws.send(JSON.stringify({
+                    "type": "board",
+                    "data": res
+                }));
                 break;
             default:
                 console.log("ws message: Unknown message type: " + type);
         }
-
-        ws.send(JSON.stringify({
-            "type": type,
-            "data": res
-        }));
     });
 });
 

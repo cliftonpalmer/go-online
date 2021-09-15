@@ -21,6 +21,17 @@ var playCount = 0;
     1: white
     2: black
 */
+function getStone(i) {
+    switch (i) {
+        case 1:
+            return 'white';
+        case 2:
+            return 'black';
+        default:
+            return 'empty';
+    }
+}
+
 var session = 0;
 var state = [];
 for (var i = 0; i < boardSize; i++)
@@ -53,17 +64,15 @@ const connect = function() {
         socket.onmessage = (msg) => {
             // Any data from the server can be manipulated here.
             let parsed = JSON.parse(msg.data);
-            console.log(parsed);
             switch (parsed.type) {
-                case "addMove":
-                    break;
-                case "getBoardState":
-                    console.log("Got board state, setting...");
+                case "board":
+                    console.log("Setting board state");
                     parsed.data.forEach( function (move, index) {
-                        console.log(move);
-                        state[move.x][move.y] = move.state === 'white' ? 1 : 2;
+                        state[move.x][move.y] =
+                            move.state === 'white' ? 1 :
+                            move.state === 'black' ? 2 :
+                            0;
                     });
-                    console.log("Done setting board state");
                     drawGrid();
                     break;
                 default:
@@ -211,39 +220,32 @@ function drawPieces() {
     }
 }
 
-function getState(playCount) {
-    switch (playCount % 2 + 1) {
-        case 1:
-            return 'white';
-        case 2:
-            return 'black';
-        default:
-            return 'empty';
-    }
-}
-
 canvas.addEventListener('mousedown', function(evt) 
 {
     try {
         // push state change to backend
-        let state = getState(playCount++);
         if(isOpen(socket)) {
+            var stone;
+            if (state[lastX][lastY] === 0) {
+                stone = playCount++ % 2 + 1;
+            } else {
+                stone = 0;
+            }
             socket.send(JSON.stringify({
-                "type":"addMove",
+                "type":"move",
                 "data": {
                     "session":session,
                     "x":lastX,
                     "y":lastY,
-                    "state":state
+                    "state":getStone(stone)
                 }
             }));
         } else {
             console.log("Websocket is closed");
         }
     } catch(e) {
-        console.log("Position is undefined");
+        console.log(e);
     }
-    drawGrid();
 });
 
 canvas.addEventListener('mousemove', function(evt) 
