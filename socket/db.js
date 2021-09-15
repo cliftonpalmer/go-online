@@ -1,11 +1,11 @@
 const mariadb = require('mariadb');
-
-const pool = mariadb.createPool({
+const dsn = {
     host: 'db', 
     user: 'socket',
     password: 'socketpw',
-    connectionLimit: 5
-});
+    connectionLimit: 10
+};
+const pool = mariadb.createPool(dsn);
 
 async function addMove(session_id, pos_x, pos_y, state) {
     let conn;
@@ -24,15 +24,12 @@ go.state (
     PRIMARY KEY(session_id, x, y)
 );
         `);
-        console.log(res);
-
         res = await conn.query(`
 INSERT INTO go.state (session_id, x, y, state)
 values (?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 state = VALUES(state);
         `, [session_id, pos_x, pos_y, state]);
-        console.log(res); // { affectedRows: 1, insertId: 1, warningStatus: 0 }
         return res;
     } catch (err) {
         console.log(err);
@@ -55,5 +52,6 @@ SELECT x, y, state from go.state where session_id = ?
     }
 }
 
+exports.pool = pool;
 exports.addMove = addMove;
 exports.getBoardState = getBoardState;

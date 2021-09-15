@@ -47,12 +47,6 @@ const connect = function() {
         socket.onopen = (e) => {
             // Send a little test data, which we can use on the server if we want
             // Resolve the promise - we are connected
-            socket.send(JSON.stringify({
-                "type":"getBoardState",
-                "data": {
-                    "session":session
-                }
-            }));
             resolve();
         }
 
@@ -62,12 +56,7 @@ const connect = function() {
             console.log(parsed);
             switch (parsed.type) {
                 case "addMove":
-                    socket.send(JSON.stringify({
-                        "type":"getBoardState",
-                        "data": {
-                            "session":session
-                        }
-                    }));
+                    break;
                 case "getBoardState":
                     console.log("Got board state, setting...");
                     parsed.data.forEach( function (move, index) {
