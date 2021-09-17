@@ -14,25 +14,15 @@ var cellHeight = boardHeight / (boardSize - 1);
 
 var lastX;
 var lastY;
-var playerStone = 1;
 
 /* state of pieces 
     0: empty
     1: white
     2: black
 */
-function getStone(i) {
-    switch (i) {
-        case 1:
-            return 'white';
-        case 2:
-            return 'black';
-        default:
-            return 'empty';
-    }
-}
-
 var session = 0;
+var playerStone;
+
 var state = [];
 for (var i = 0; i < boardSize; i++)
 {
@@ -67,10 +57,7 @@ const connect = function() {
                 case "board":
                     console.log("Setting board state");
                     parsed.data.forEach( function (move, index) {
-                        state[move.x][move.y] =
-                            move.state === 'white' ? 1 :
-                            move.state === 'black' ? 2 :
-                            0;
+                        state[move.x][move.y] = move.state;
                     });
                     drawGrid();
                     break;
@@ -224,19 +211,13 @@ canvas.addEventListener('mousedown', function(evt)
     try {
         // push state change to backend
         if(isOpen(socket)) {
-            var stone;
-            if (state[lastX][lastY] === 0) {
-                stone = playerStone;
-            } else {
-                stone = 0;
-            }
             socket.send(JSON.stringify({
                 "type":"move",
                 "data": {
                     "session":session,
                     "x":lastX,
                     "y":lastY,
-                    "state":getStone(stone)
+                    "state":state[lastX][lastY] > 0 ? 0 : playerStone
                 }
             }));
         } else {
@@ -306,10 +287,11 @@ document.getElementById("new").onclick = function () {
 };
 
 const stones = document.getElementById("stones");
-playerStone = parseInt(stones.value);
+playerStone = stones.selectedIndex;
 stones.onchange = function () {
     // let player pick stone type
-    playerStone = parseInt(stones.value);
+    playerStone = stones.selectedIndex;
+    console.log(`Player changed stone to ${playerStone}`);
 };
 
 connect();

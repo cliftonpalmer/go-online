@@ -17,7 +17,7 @@ go.state (
     session_id INT UNSIGNED,
     x TINYINT UNSIGNED,
     y TINYINT UNSIGNED,
-    state ENUM('empty', 'white', 'black'),
+    state TINYINT UNSIGNED,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY(session_id, x, y)
