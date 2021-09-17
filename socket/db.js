@@ -7,12 +7,11 @@ const dsn = {
 };
 const pool = mariadb.createPool(dsn);
 
-async function addMove(session_id, pos_x, pos_y, state) {
+async function initBoard() {
     let conn;
     try {
         conn = await pool.getConnection();
-
-        var res = await conn.query(`
+        return await conn.query(`
 CREATE TABLE IF NOT EXISTS
 go.state (
     session_id INT UNSIGNED,
@@ -24,13 +23,23 @@ go.state (
     PRIMARY KEY(session_id, x, y)
 );
         `);
-        res = await conn.query(`
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
+async function addMove(session_id, pos_x, pos_y, state) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(`
 INSERT INTO go.state (session_id, x, y, state)
 values (?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 state = VALUES(state);
         `, [session_id, pos_x, pos_y, state]);
-        return res;
     } catch (err) {
         console.log(err);
     } finally {
@@ -53,5 +62,6 @@ SELECT x, y, state from go.state where session_id = ?
 }
 
 exports.pool = pool;
+exports.initBoard = initBoard;
 exports.addMove = addMove;
 exports.getBoardState = getBoardState;

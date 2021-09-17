@@ -56,7 +56,6 @@ const connect = function() {
         socket = new WebSocket(socketUrl);
 
         socket.onopen = (e) => {
-            // Send a little test data, which we can use on the server if we want
             // Resolve the promise - we are connected
             resolve();
         }
@@ -303,3 +302,7 @@ function getGridPoint(evt)
 
 // finish
 connect();
+
+document.getElementById("new").onclick = function () {
+    alert('hello!');
+};

@@ -12,22 +12,33 @@ async function pollStatefulChange(ws, session_id) {
     let conn;
     try {
         conn = await db.pool.getConnection();
-        var lastUpdated = 0;
+        var lastUpdated  = 0;
+        var rowCount = 0;
         while(true) {
             var res = await conn.query(`
-select UNIX_TIMESTAMP(MAX(updated_at)) as last_updated
-from go.state
-where session_id = ?;
+SELECT
+    count(*) AS num_rows,
+    UNIX_TIMESTAMP(max_updated_at) AS last_updated
+FROM go.state g JOIN (
+    SELECT MAX(updated_at) AS max_updated_at
+    FROM go.state
+    WHERE session_id = ?
+) x
+ON x.max_updated_at = g.updated_at
             `, [session_id]);
-            console.log(res);
-            let updatedAt = res[0].last_updated;
-            if ( updatedAt > lastUpdated) {
-                console.log("websocket poll: board updated!");
+
+            // update board state of client if more moves
+            // have been added since max last timestamp
+            // If more moves have been added in <1 sec,
+            // use the row count for the max last updated timestamp
+            var newRowCount = res[0].num_rows;
+            var updatedAt = res[0].last_updated;
+            if (updatedAt > lastUpdated || rowCount < newRowCount) {
                 lastUpdated = updatedAt;
-                res = await db.getBoardState(session_id);
+                rowCount = newRowCount;
                 ws.send(JSON.stringify({
                     "type": "board",
-                    "data": res
+                    "data": await db.getBoardState(session_id)
                 }));
             }
             await sleep(1000);
@@ -42,34 +53,45 @@ where session_id = ?;
 app.ws('/ws', async function(ws, req) {
     // poll for stateful change and notify clients to update their boards
     var session_id = 0;
-    pollStatefulChange(ws, 0);
+    db.initBoard();
+
+    // send initial message to draw client board
+    ws.send(JSON.stringify({
+        "type": "board",
+        "data": await db.getBoardState(session_id)
+    }));
 
     ws.on('message', async function(msg) {
-        console.log(`ws message: ${msg}`);
-
-        var parsed = JSON.parse(msg);
-        switch (parsed.type) {
-            case "move":
-                await db.addMove(
-                    parsed.data.session,
-                    parsed.data.x,
-                    parsed.data.y,
-                    parsed.data.state,
-                    );
-                // fall through and return new board state
-            case "board":
-                var res = await db.getBoardState(
-                    parsed.data.session
-                    );
-                ws.send(JSON.stringify({
-                    "type": "board",
-                    "data": res
-                }));
-                break;
-            default:
-                console.log("ws message: Unknown message type: " + type);
+        let parsed;
+        try {
+            parsed = JSON.parse(msg);
+            switch (parsed.type) {
+                case "move":
+                    await db.addMove(
+                        parsed.data.session,
+                        parsed.data.x,
+                        parsed.data.y,
+                        parsed.data.state,
+                        );
+                    // fall through and return new board state
+                case "board":
+                    var res = await db.getBoardState(
+                        parsed.data.session
+                        );
+                    ws.send(JSON.stringify({
+                        "type": "board",
+                        "data": res
+                    }));
+                    break;
+                default:
+                    console.log("ws message: Unknown message type: " + type);
+            }
+        } catch(err) {
+            console.log(`ws message error: ${err}`);
         }
     });
+
+    pollStatefulChange(ws, session_id);
 });
 
 app.listen(3000);
