@@ -14,7 +14,7 @@ var cellHeight = boardHeight / (boardSize - 1);
 
 var lastX;
 var lastY;
-var playCount = 0;
+var playerStone = 1;
 
 /* state of pieces 
     0: empty
@@ -226,7 +226,7 @@ canvas.addEventListener('mousedown', function(evt)
         if(isOpen(socket)) {
             var stone;
             if (state[lastX][lastY] === 0) {
-                stone = playCount++ % 2 + 1;
+                stone = playerStone;
             } else {
                 stone = 0;
             }
@@ -301,8 +301,15 @@ function getGridPoint(evt)
 }
 
 // finish
-connect();
-
 document.getElementById("new").onclick = function () {
-    alert('hello!');
+    // TODO: new game, new session, etc
 };
+
+const stones = document.getElementById("stones");
+playerStone = parseInt(stones.value);
+stones.onchange = function () {
+    // let player pick stone type
+    playerStone = parseInt(stones.value);
+};
+
+connect();
