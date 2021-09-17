@@ -7,6 +7,21 @@ const dsn = {
 };
 const pool = mariadb.createPool(dsn);
 
+async function deleteSession(session_id) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(
+            "DELETE FROM go.state WHERE session_id = ?",
+            [session_id]
+        );
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
 async function initBoard() {
     let conn;
     try {
@@ -62,6 +77,7 @@ SELECT x, y, state from go.state where session_id = ?
 }
 
 exports.pool = pool;
+exports.deleteSession = deleteSession;
 exports.initBoard = initBoard;
 exports.addMove = addMove;
 exports.getBoardState = getBoardState;

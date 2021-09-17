@@ -61,6 +61,13 @@ const connect = function() {
                     });
                     drawGrid();
                     break;
+                case "new":
+                    for (var i = 0; i < boardSize; i++) {
+                        for (var j = 0; j < boardSize; j++) {
+                            state[i][j] = 0;
+                        }
+                    }
+                    drawGrid();
                 default:
                     console.log(msg);
             }
@@ -283,7 +290,13 @@ function getGridPoint(evt)
 
 // finish
 document.getElementById("new").onclick = function () {
-    // TODO: new game, new session, etc
+    // new game, new session, etc
+    socket.send(JSON.stringify({
+        "type":"new",
+        "data": {
+            "session":session
+        }
+    }));
 };
 
 const stones = document.getElementById("stones");

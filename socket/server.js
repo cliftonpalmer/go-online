@@ -66,6 +66,12 @@ app.ws('/ws', async function(ws, req) {
         try {
             parsed = JSON.parse(msg);
             switch (parsed.type) {
+                case "new":
+                    ws.send(JSON.stringify({
+                        "type": "new",
+                        "data": await db.deleteSession(parsed.data.session)
+                    }));
+                    break;
                 case "move":
                     await db.addMove(
                         parsed.data.session,
@@ -75,12 +81,9 @@ app.ws('/ws', async function(ws, req) {
                         );
                     // fall through and return new board state
                 case "board":
-                    var res = await db.getBoardState(
-                        parsed.data.session
-                        );
                     ws.send(JSON.stringify({
                         "type": "board",
-                        "data": res
+                        "data": await db.getBoardState(parsed.data.session)
                     }));
                     break;
                 default:
