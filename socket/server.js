@@ -9,30 +9,18 @@ function sleep(ms) {
 }
 
 async function pollStatefulChange(ws, session_id) {
-    let conn;
-    try {
-        conn = await db.pool.getConnection();
-        var lastUpdated  = 0;
-        var rowCount = 0;
-        while(true) {
-            var res = await conn.query(`
-SELECT
-    count(*) AS num_rows,
-    UNIX_TIMESTAMP(max_updated_at) AS last_updated
-FROM go.state g JOIN (
-    SELECT MAX(updated_at) AS max_updated_at
-    FROM go.state
-    WHERE session_id = ?
-) x
-ON x.max_updated_at = g.updated_at
-            `, [session_id]);
+    var lastUpdated  = 0;
+    var rowCount = 0;
+    while (true) {
+        try {
+            var res = await db.getMaxUpdatedState(session_id);
+            var newRowCount = res[0].num_rows;
+            var updatedAt = res[0].last_updated;
 
             // update board state of client if more moves
             // have been added since max last timestamp
             // If more moves have been added in <1 sec,
             // use the row count for the max last updated timestamp
-            var newRowCount = res[0].num_rows;
-            var updatedAt = res[0].last_updated;
             if (updatedAt > lastUpdated || rowCount < newRowCount) {
                 lastUpdated = updatedAt;
                 rowCount = newRowCount;
@@ -42,12 +30,10 @@ ON x.max_updated_at = g.updated_at
                 }));
             }
             await sleep(1000);
+        } catch(err) {
+            console.log(`websocket poll error: ${err}`);
         }
-    } catch(err) {
-        console.log(`websocket poll error: ${err}`);
-    } finally {
-        if (conn) conn.end();
-    } 
+    }
 }
 
 app.ws('/ws', async function(ws, req) {

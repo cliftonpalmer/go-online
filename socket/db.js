@@ -7,6 +7,28 @@ const dsn = {
 };
 const pool = mariadb.createPool(dsn);
 
+async function getMaxUpdatedState(session_id) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(`
+SELECT
+    count(*) AS num_rows,
+    UNIX_TIMESTAMP(max_updated_at) AS last_updated
+FROM go.state g JOIN (
+    SELECT MAX(updated_at) AS max_updated_at
+    FROM go.state
+    WHERE session_id = ?
+) x
+ON x.max_updated_at = g.updated_at
+            `, [session_id]);
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
 async function deleteSession(session_id) {
     let conn;
     try {
@@ -76,7 +98,7 @@ SELECT x, y, state from go.state where session_id = ?
     }
 }
 
-exports.pool = pool;
+exports.getMaxUpdatedState = getMaxUpdatedState;
 exports.deleteSession = deleteSession;
 exports.initBoard = initBoard;
 exports.addMove = addMove;
