@@ -18,17 +18,3 @@ services:
         image: httpd:2.4
         volumes:
         - ./htdocs:/usr/local/apache2/htdocs
-    web:
-        image: nginx:1.17
-        restart: on-failure
-        deploy:
-            restart_policy:
-                condition: on-failure
-                delay: 5s
-                max_attempts: 5
-                window: 10s
-        volumes:
-        - ./nginx.conf:/etc/nginx/nginx.conf
-        environment:
-        - NGINX_HOST=purplebirdman.com
-        - NGINX_PORT=80
