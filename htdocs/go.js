@@ -39,7 +39,8 @@ var socket;
 const connect = function() {
     return new Promise((resolve, reject) => {
         const socketProtocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
-        const port = 3000;
+        // TODO: get rid of this DAMN PORT NUMBER!!!
+        const port = 8100;
         const socketUrl = `${socketProtocol}//${window.location.hostname}:${port}/ws/`
 
         // Define socket
