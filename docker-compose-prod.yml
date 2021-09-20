@@ -1,4 +1,8 @@
 version: '3'
+networks:
+    default:
+        external:
+            name: proxy
 services:
     db:
         image: mariadb:10.6
@@ -28,5 +32,3 @@ services:
         environment:
         - NGINX_HOST=purplebirdman.com
         - NGINX_PORT=80
-        ports:
-        - 8000:80
