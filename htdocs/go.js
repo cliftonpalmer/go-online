@@ -14,25 +14,15 @@ var cellHeight = boardHeight / (boardSize - 1);
 
 var lastX;
 var lastY;
-var playCount = 0;
 
 /* state of pieces 
     0: empty
     1: white
     2: black
 */
-function getStone(i) {
-    switch (i) {
-        case 1:
-            return 'white';
-        case 2:
-            return 'black';
-        default:
-            return 'empty';
-    }
-}
-
 var session = 0;
+var playerStone;
+
 var state = [];
 for (var i = 0; i < boardSize; i++)
 {
@@ -49,14 +39,13 @@ var socket;
 const connect = function() {
     return new Promise((resolve, reject) => {
         const socketProtocol = (window.location.protocol === 'https:' ? 'wss:' : 'ws:')
-        const port = 3000;
+        const port = window.location.port;
         const socketUrl = `${socketProtocol}//${window.location.hostname}:${port}/ws/`
 
         // Define socket
         socket = new WebSocket(socketUrl);
 
         socket.onopen = (e) => {
-            // Send a little test data, which we can use on the server if we want
             // Resolve the promise - we are connected
             resolve();
         }
@@ -68,13 +57,17 @@ const connect = function() {
                 case "board":
                     console.log("Setting board state");
                     parsed.data.forEach( function (move, index) {
-                        state[move.x][move.y] =
-                            move.state === 'white' ? 1 :
-                            move.state === 'black' ? 2 :
-                            0;
+                        state[move.x][move.y] = move.state;
                     });
                     drawGrid();
                     break;
+                case "new":
+                    for (var i = 0; i < boardSize; i++) {
+                        for (var j = 0; j < boardSize; j++) {
+                            state[i][j] = 0;
+                        }
+                    }
+                    drawGrid();
                 default:
                     console.log(msg);
             }
@@ -225,19 +218,13 @@ canvas.addEventListener('mousedown', function(evt)
     try {
         // push state change to backend
         if(isOpen(socket)) {
-            var stone;
-            if (state[lastX][lastY] === 0) {
-                stone = playCount++ % 2 + 1;
-            } else {
-                stone = 0;
-            }
             socket.send(JSON.stringify({
                 "type":"move",
                 "data": {
                     "session":session,
                     "x":lastX,
                     "y":lastY,
-                    "state":getStone(stone)
+                    "state":state[lastX][lastY] > 0 ? 0 : playerStone
                 }
             }));
         } else {
@@ -302,4 +289,22 @@ function getGridPoint(evt)
 }
 
 // finish
+document.getElementById("new").onclick = function () {
+    // new game, new session, etc
+    socket.send(JSON.stringify({
+        "type":"new",
+        "data": {
+            "session":session
+        }
+    }));
+};
+
+const stones = document.getElementById("stones");
+playerStone = stones.selectedIndex;
+stones.onchange = function () {
+    // let player pick stone type
+    playerStone = stones.selectedIndex;
+    console.log(`Player changed stone to ${playerStone}`);
+};
+
 connect();

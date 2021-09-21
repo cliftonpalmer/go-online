@@ -7,30 +7,76 @@ const dsn = {
 };
 const pool = mariadb.createPool(dsn);
 
-async function addMove(session_id, pos_x, pos_y, state) {
+async function getMaxUpdatedState(session_id) {
     let conn;
     try {
         conn = await pool.getConnection();
+        return await conn.query(`
+SELECT
+    count(*) AS num_rows,
+    UNIX_TIMESTAMP(max_updated_at) AS last_updated
+FROM go.state g JOIN (
+    SELECT MAX(updated_at) AS max_updated_at
+    FROM go.state
+    WHERE session_id = ?
+) x
+ON x.max_updated_at = g.updated_at
+            `, [session_id]);
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
 
-        var res = await conn.query(`
+async function deleteSession(session_id) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(
+            "DELETE FROM go.state WHERE session_id = ?",
+            [session_id]
+        );
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
+async function initBoard() {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(`
 CREATE TABLE IF NOT EXISTS
 go.state (
     session_id INT UNSIGNED,
     x TINYINT UNSIGNED,
     y TINYINT UNSIGNED,
-    state ENUM('empty', 'white', 'black'),
+    state TINYINT UNSIGNED,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY(session_id, x, y)
 );
         `);
-        res = await conn.query(`
+    } catch (err) {
+        console.log(err);
+    } finally {
+        if (conn) conn.end();
+    }
+}
+
+async function addMove(session_id, pos_x, pos_y, state) {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        return await conn.query(`
 INSERT INTO go.state (session_id, x, y, state)
 values (?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 state = VALUES(state);
         `, [session_id, pos_x, pos_y, state]);
-        return res;
     } catch (err) {
         console.log(err);
     } finally {
@@ -52,6 +98,8 @@ SELECT x, y, state from go.state where session_id = ?
     }
 }
 
-exports.pool = pool;
+exports.getMaxUpdatedState = getMaxUpdatedState;
+exports.deleteSession = deleteSession;
+exports.initBoard = initBoard;
 exports.addMove = addMove;
 exports.getBoardState = getBoardState;
