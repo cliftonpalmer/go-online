@@ -1,14 +1,15 @@
 version: '3'
 services:
     db:
-        image: mariadb:10.6
+        image: postgres:13.4-alpine
         environment:
-            MARIADB_ROOT_PASSWORD: admin
-            MARIADB_DATABASE: go
-            MARIADB_USER: socket
-            MARIADB_PASSWORD: socketpw
+            POSTGRES_USER: go
+            POSTGRES_PASSWORD: socketpw
+        ports:
+        - 5432:5432
     httpd:
-        image: httpd:2.4
+        build: .
+        image: httpdlua
         volumes:
         - ./htdocs:/usr/local/apache2/htdocs
         - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
