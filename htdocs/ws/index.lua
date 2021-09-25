@@ -4,11 +4,32 @@ require "string"
 driver = require "luasql.postgres"
 json = require "json"
 
+function getMaxUpdatedState(session)
+    local env = driver.postgres()
+    local con = assert(env:connect("", "go", "socketpw", "db"))
+    local cur = assert(con:execute(string.format([[
+SELECT
+    count(*) AS num_rows,
+    EXTRACT (EPOCH FROM max_updated_at) AS last_updated
+FROM board g JOIN (
+    SELECT MAX(updated_at) AS max_updated_at
+    FROM board
+    WHERE session_id = %s
+) x
+ON x.max_updated_at = g.updated_at
+]], session)))
+    local row = cur:fetch({}, "a")
+
+    cur:close()
+    con:close()
+    env:close()
+
+    return row
+end
+
 function getBoardState(session)
     local env = driver.postgres()
     local con = assert(env:connect("", "go", "socketpw", "db"))
-
-    -- retrieve a cursor
     local cur = assert(con:execute(string.format([[
 SELECT x, y, state FROM board WHERE session_id = %s
 ]], session)))
@@ -78,6 +99,33 @@ ws_types = {
     new = type_new
 }
 
+function pollStatefulChange(r, session)
+    local lastUpdated = 0
+    local rowCount = 0
+    while true do
+        local res = getMaxUpdatedState(session)
+        local newRowCount = res.num_rows
+        local updatedAt = res.last_updated
+
+        --[[
+            update board state of client if more moves
+            have been added since max last timestamp
+            If more moves have been added in <1 sec,
+            use the row count for the max last updated timestamp
+        ]]--
+        if (updatedAt > lastUpdated or rowCount < newRowCount) then
+            lastUpdated = updatedAt
+            rowCount = newRowCount
+            r:wswrite(json.encode({
+                type="board", 
+                data=getBoardState(session)
+            }))
+        end
+
+        coroutine.yield()
+    end
+end
+
 --[[
      This is the default method name for Lua handlers, see the optional
      function-name in the LuaMapHandler directive to choose a different
@@ -85,17 +133,15 @@ ws_types = {
 --]]
 function handle(r)
     if r:wsupgrade() then
-        -- write something to the client
+        -- init coroutine for polling
         initBoard()
         local session = 0
-        r:wswrite(json.encode({
-            type="board", 
-            data=getBoardState(session)
-        }))
+        local poll = coroutine.create(pollStatefulChange)
 
         -- Sleep while nothing is being sent to us...
         repeat
             while r:wspeek() == false do
+                coroutine.resume(poll, r, session)
                 r.usleep(50000)
             end
 
