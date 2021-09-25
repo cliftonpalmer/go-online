@@ -4,13 +4,34 @@ require "string"
 driver = require "luasql.postgres"
 json = require "json"
 
-function init_board()
-    print("You called init_board")
+function getBoardState(session)
     local env = driver.postgres()
     local con = assert(env:connect("", "go", "socketpw", "db"))
 
     -- retrieve a cursor
-    local res = assert(con:execute[[
+    local cur = assert(con:execute(string.format([[
+SELECT x, y, state FROM board WHERE session_id = %s
+]], session)))
+
+    local rows = {}
+    local row
+    repeat
+        row = cur:fetch({}, "a")
+        if row then table.insert(rows, row) end
+    until row == nil
+
+    cur:close()
+    con:close()
+    env:close()
+
+    return rows
+end
+
+function initBoard()
+    local env = driver.postgres()
+    local con = assert(env:connect("", "go", "socketpw", "db"))
+
+    assert(con:execute[[
 CREATE TABLE IF NOT EXISTS board (
     session_id INTEGER,
     x INTEGER,
@@ -19,19 +40,16 @@ CREATE TABLE IF NOT EXISTS board (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(session_id, x, y)
 )]])
-    print(string.format("Init board: %s", res))
 
     con:close()
     env:close()
 end
 
 function type_move(data)
-    print("You called type_move")
     local env = driver.postgres()
     local con = assert(env:connect("", "go", "socketpw", "db"))
 
-    -- retrieve a cursor
-    local res = assert(con:execute(string.format([[
+    assert(con:execute(string.format([[
 INSERT INTO board (session_id, x, y, state)
 VALUES (%i, %i, %i, %i)
 ON CONFLICT (session_id, x, y) DO UPDATE
@@ -41,12 +59,18 @@ SET state = excluded.state,
 
     con:close()
     env:close()
-
-    return res
 end
 
-function type_new(session)
-    print("You called type_new")
+function type_new(data)
+    local env = driver.postgres()
+    local con = assert(env:connect("", "go", "socketpw", "db"))
+
+    assert(con:execute(string.format([[
+DELETE FROM board WHERE session_id = %s
+]], data.session)))
+
+    con:close()
+    env:close()
 end
 
 ws_types = {
@@ -62,24 +86,35 @@ ws_types = {
 function handle(r)
     if r:wsupgrade() then
         -- write something to the client
-        r:wswrite("Welcome to websockets!")
-        init_board()
+        initBoard()
+        local session = 0
+        r:wswrite(json.encode({
+            type="board", 
+            data=getBoardState(session)
+        }))
 
         -- Sleep while nothing is being sent to us...
-        while r:wspeek() == false do
-            r.usleep(50000)
-        end
+        repeat
+            while r:wspeek() == false do
+                r.usleep(50000)
+            end
 
-        -- We have data ready!
-        local line = r:wsread()
-        print(line)
+            -- We have data ready!
+            local line = r:wsread()
+            print(line)
 
-        local ds = json.decode(line)
-        local f = ws_types[ds.type]
-        if f then
-            local res = f(ds.data)
-            r:wswrite(json.encode(res))
-        end
+            local ds = json.decode(line)
+            local f = ws_types[ds.type]
+            if f then
+                local data = f(ds.data)
+                if data then r:wswrite(json.encode(data)) end
+
+                r:wswrite(json.encode({
+                    type="board", 
+                    data=getBoardState(session)
+                }))
+            end
+        until false
 
         r:wsclose()  -- goodbye!
     end

@@ -57,7 +57,7 @@ const connect = function() {
                 case "board":
                     console.log("Setting board state");
                     parsed.data.forEach( function (move, index) {
-                        state[move.x][move.y] = move.state;
+                        state[move.x][move.y] = parseInt(move.state);
                     });
                     drawGrid();
                     break;
