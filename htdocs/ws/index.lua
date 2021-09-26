@@ -10,13 +10,14 @@ function getMaxUpdatedState(session)
     local cur = assert(con:execute(string.format([[
 SELECT
     count(*) AS num_rows,
-    EXTRACT (EPOCH FROM max_updated_at) AS last_updated
-FROM board g JOIN (
+    EXTRACT (EPOCH FROM x.max_updated_at) AS last_updated
+FROM board b JOIN (
     SELECT MAX(updated_at) AS max_updated_at
     FROM board
     WHERE session_id = %s
 ) x
-ON x.max_updated_at = g.updated_at
+ON (x.max_updated_at = b.updated_at)
+GROUP BY x.max_updated_at
 ]], session)))
     local row = cur:fetch({}, "a")
 
@@ -103,9 +104,12 @@ function pollStatefulChange(r, session)
     local lastUpdated = 0
     local rowCount = 0
     while true do
+        print("Polling for board change")
         local res = getMaxUpdatedState(session)
-        local newRowCount = res.num_rows
-        local updatedAt = res.last_updated
+        local newRowCount = tonumber(res.num_rows)
+        local updatedAt = tonumber(res.last_updated)
+        print(string.format("updated: %s .. %s", lastUpdated, res.last_updated))
+        print(string.format("rows: %s .. %s", rowCount, res.num_rows))
 
         --[[
             update board state of client if more moves
@@ -114,6 +118,7 @@ function pollStatefulChange(r, session)
             use the row count for the max last updated timestamp
         ]]--
         if (updatedAt > lastUpdated or rowCount < newRowCount) then
+            print("Board changed!")
             lastUpdated = updatedAt
             rowCount = newRowCount
             r:wswrite(json.encode({
@@ -134,18 +139,24 @@ end
 function handle(r)
     if r:wsupgrade() then
         -- init coroutine for polling
+        print("Websocket connected!")
         initBoard()
         local session = 0
         local poll = coroutine.create(pollStatefulChange)
+        coroutine.resume(poll, r, session)
 
         -- Sleep while nothing is being sent to us...
         repeat
+            print("Peeking")
+            -- TODO: wspeek isn't returning false when I expect
             while r:wspeek() == false do
+                print("looping")
                 coroutine.resume(poll, r, session)
                 r.usleep(50000)
             end
 
             -- We have data ready!
+            print("Reading data")
             local line = r:wsread()
             print(line)
 
