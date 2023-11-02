@@ -9,10 +9,10 @@ services:
             MARIADB_PASSWORD: socketpw
     socket:
         build: ./socket
-        image: cjpalmer/go-socket:1.0.0
+        image: cjpalmer/go-socket:1.0.1
     web:
         build: ./web
-        image: cjpalmer/go-web:1.0.0
+        image: cjpalmer/go-web:1.0.1
         environment:
         - NGINX_HOST=purplebirdman.com
         - NGINX_PORT=80

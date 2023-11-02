@@ -29,10 +29,10 @@ async function pollStatefulChange(ws, session_id) {
                     "data": await db.getBoardState(session_id)
                 }));
             }
-            await sleep(1000);
         } catch(err) {
             console.log(`websocket poll error: ${err}`);
         }
+        await sleep(1000);
     }
 }
 
