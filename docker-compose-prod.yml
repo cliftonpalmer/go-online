@@ -4,7 +4,7 @@ networks:
         external: true
 services:
     db:
-        image: mariadb:10.6
+        image: mariadb:11.1.2
         environment:
             MARIADB_ROOT_PASSWORD: admin
             MARIADB_DATABASE: go
