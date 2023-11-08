@@ -20,8 +20,20 @@ var lastY;
     1: white
     2: black
 */
-var session = 0;
+
 var playerStone;
+
+/* get session ID from URI if included */
+var session = 0;
+var queryString = location.search
+let params = new URLSearchParams(queryString)
+let url_session = parseInt(params.get("session"))
+
+if (url_session > 0)
+{
+    session = url_session
+}
+console.log("Session ID: " + url_session)
 
 var state = [];
 for (var i = 0; i < boardSize; i++)
@@ -54,11 +66,29 @@ const connect = function() {
             // Any data from the server can be manipulated here.
             let parsed = JSON.parse(msg.data);
             switch (parsed.type) {
+                case "session":
+                    socket.send(JSON.stringify({
+                        "type":"session",
+                        "data": {
+                            "session":session
+                        }
+                    }));
+                    break;
                 case "board":
                     console.log("Setting board state");
+
+                    // lazily clean up board and reinit
+                    for (var i = 0; i < boardSize; i++) {
+                        for (var j = 0; j < boardSize; j++) {
+                            state[i][j] = 0;
+                        }
+                    }
+
+                    // set up board according to db state
                     parsed.data.forEach( function (move, index) {
                         state[move.x][move.y] = move.state;
                     });
+
                     drawGrid();
                     break;
                 case "new":

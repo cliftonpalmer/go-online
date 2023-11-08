@@ -41,10 +41,9 @@ app.ws('/ws', async function(ws, req) {
     var session_id = 0;
     db.initBoard();
 
-    // send initial message to draw client board
+    // get session ID
     ws.send(JSON.stringify({
-        "type": "board",
-        "data": await db.getBoardState(session_id)
+        "type": "session"
     }));
 
     ws.on('message', async function(msg) {
@@ -52,6 +51,15 @@ app.ws('/ws', async function(ws, req) {
         try {
             parsed = JSON.parse(msg);
             switch (parsed.type) {
+                case "session":
+                    session_id = parsed.data.session
+
+                    // send initial message to draw session client board
+                    ws.send(JSON.stringify({
+                        "type": "board",
+                        "data": await db.getBoardState(session_id)
+                    }));
+                    break;
                 case "new":
                     ws.send(JSON.stringify({
                         "type": "new",

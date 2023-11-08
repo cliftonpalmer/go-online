@@ -2,6 +2,8 @@ version: '3'
 networks:
     proxy:
         external: true
+    backend:
+        driver: overlay
 services:
     db:
         image: mariadb:11.1.2
@@ -10,13 +12,17 @@ services:
             MARIADB_DATABASE: go
             MARIADB_USER: socket
             MARIADB_PASSWORD: socketpw
+        networks:
+        - backend
     socket:
-        image: cjpalmer/go-socket:1.0.1
+        image: cjpalmer/go-socket:1.1.0
+        networks:
+        - backend
     web:
-        image: cjpalmer/go-web:1.0.1
+        image: cjpalmer/go-web:1.1.0
         environment:
         - NGINX_HOST=purplebirdman.com
         - NGINX_PORT=80
         networks:
-        - default
+        - backend
         - proxy
