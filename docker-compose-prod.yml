@@ -15,11 +15,11 @@ services:
         networks:
         - backend
     socket:
-        image: cjpalmer/go-socket:1.1.0
+        image: cjpalmer/go-socket:1.2.0
         networks:
         - backend
     web:
-        image: cjpalmer/go-web:1.1.0
+        image: cjpalmer/go-web:1.2.0
         environment:
         - NGINX_HOST=purplebirdman.com
         - NGINX_PORT=80
